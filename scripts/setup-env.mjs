@@ -1,6 +1,6 @@
 import {randomBytes} from 'node:crypto';
 import {writeFileSync} from 'node:fs';
 try{
- writeFileSync('.env',`POSTGRES_PASSWORD=${randomBytes(32).toString('hex')}\nAPP_PORT=3000\n`,{flag:'wx',mode:0o600});
+ writeFileSync('.env',`POSTGRES_PASSWORD=${randomBytes(32).toString('hex')}\nAPP_PORT=3002\nAPP_BIND_ADDRESS=127.0.0.1\nAPP_USERNAME=carlos\nAPP_PASSWORD=${randomBytes(24).toString('base64url')}\n`,{flag:'wx',mode:0o600});
  console.log('.env creado con una contraseña aleatoria. No se muestra ni se incluye en Git.');
 }catch(e){if(e.code==='EEXIST')console.log('.env ya existe; se conserva sin cambios.');else throw e;}

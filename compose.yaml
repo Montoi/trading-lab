@@ -47,8 +47,10 @@ services:
       PGUSER: aurum
       PGDATABASE: aurum
       PGPASSWORD: ${POSTGRES_PASSWORD:?Generate .env first}
+      APP_USERNAME: ${APP_USERNAME:-carlos}
+      APP_PASSWORD: ${APP_PASSWORD:?Generate .env first}
     ports:
-      - "127.0.0.1:${APP_PORT:-3000}:3000"
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3002}:3000"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
