@@ -1,6 +1,6 @@
 # Aurum · Laboratorio de estrategias XAUUSD
 
-MVP de investigación con estrategias configurables, backtesting por lotes y resultados persistentes en PostgreSQL. Aplicación Next.js en un contenedor; PostgreSQL en otro, sin publicar su puerto. No ejecuta operaciones reales ni incorpora aún el MCP de MetaTrader.
+MVP de investigación con estrategias configurables, backtesting por lotes y resultados persistentes en PostgreSQL. En producción, Next.js y PostgreSQL funcionan en contenedores. El desarrollo local usa esa misma base de Contabo por SSH. PostgreSQL solo escucha en el servidor en 127.0.0.1:15432, sin exposición pública. No ejecuta operaciones reales ni incorpora aún el MCP de MetaTrader.
 
 ## Funciones
 
@@ -10,9 +10,9 @@ MVP de investigación con estrategias configurables, backtesting por lotes y res
 - Curva de capital, operaciones, comparación, exportación CSV e historial de configuraciones usadas.
 - Datos sintéticos explícitos para explorar el motor, e importación de CSV H1 de XAUUSD. El CSV original no se almacena: consérvalo para repetir la prueba. El período se refiere a las fechas de los datos seleccionados.
 
-## Despliegue con Docker Compose
+## Despliegue en Contabo con Docker Compose
 
-Requiere Docker Engine y Docker Compose v2 o posterior. Desde la carpeta del repositorio:
+Solo en el servidor: requiere Docker Engine y Docker Compose v2 o posterior. No levantes este Compose en tu computadora, porque crearía otra base. Desde la carpeta del repositorio:
 
 ```sh
 # Con Node instalado:
@@ -24,7 +24,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-El generador crea `.env` solo si no existe, con contraseñas aleatorias diferentes para PostgreSQL y la aplicación. Nunca lo sobrescribe. El usuario inicial de la aplicación es `carlos`; su contraseña está en `APP_PASSWORD` de `.env`. Este archivo está excluido de Git y del contexto de Docker.
+El generador crea `.env` solo si no existe, con una contraseña aleatoria para PostgreSQL. Nunca lo sobrescribe. Este archivo está excluido de Git y del contexto de Docker. Aurum permite entrar sin usuario ni contraseña.
 
 Se inicia primero PostgreSQL, luego la migración y finalmente la aplicación. El volumen `aurum_postgres_data` conserva las estrategias y pruebas entre reinicios y reconstrucciones. Las migraciones se ejecutan explícitamente antes de iniciar la app y están en `db/migrations/`.
 
@@ -34,7 +34,7 @@ La configuración inicial escucha en `127.0.0.1:3002`. Para abrirla por un túne
 ssh -L 3002:127.0.0.1:3002 root@62.171.152.158
 ```
 
-Abre `http://localhost:3002` en tu computadora e introduce las credenciales de Aurum. Para acceso directo por IP y puerto, configura `APP_BIND_ADDRESS=0.0.0.0` en `.env` y recrea la aplicación. HTTP directo no cifra la contraseña; el túnel SSH cifra la conexión. La contraseña de Aurum es independiente de la contraseña SSH. No se necesita publicar PostgreSQL.
+Abre `http://localhost:3002` en tu computadora. Para acceso directo por IP y puerto, configura `APP_BIND_ADDRESS=0.0.0.0` en `.env` y recrea la aplicación. La aplicación no solicita credenciales; cualquiera que alcance su dirección puede leer y modificar sus datos. El túnel SSH cifra la conexión. El puerto 15432 de PostgreSQL permanece enlazado únicamente a la interfaz local del servidor para el túnel de desarrollo.
 
 ## GitHub y Contabo
 
@@ -72,7 +72,19 @@ npm run lint
 npm run build
 ```
 
-Para desarrollo fuera de Docker, configura `DATABASE_URL` o las variables estándar `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`, `PGPASSWORD`, y ejecuta la migración en PostgreSQL. `APP_PASSWORD` es obligatorio incluso en desarrollo. `npm run dev` carga `.env`.
+### Trabajar localmente con la base compartida
+
+La computadora y la aplicación publicada utilizan **la misma base `aurum` en Contabo**. Guardar, editar o eliminar estrategias y resultados localmente afecta inmediatamente a los mismos datos que ve producción. Las interfaces deben recargarse para mostrar cambios realizados desde la otra sesión.
+
+El `.env` local debe contener el valor existente de `POSTGRES_PASSWORD` del servidor. En esta computadora ya están configurados. No ejecutes el generador de contraseñas para sustituir estas credenciales ni ejecutes migraciones automáticamente desde desarrollo.
+
+```sh
+npm run dev
+```
+
+Este comando abre un túnel SSH cifrado hacia Contabo, solicita la contraseña SSH en la terminal si no hay una clave configurada, comprueba la base compartida y arranca Next.js con recarga automática en `http://127.0.0.1:3000`. Mantén la terminal abierta. `Ctrl+C` detiene la aplicación y el túnel. Si se pierde el túnel, vuelve a ejecutar el comando. Necesitas Node y OpenSSH; Docker local no es necesario.
+
+Los puertos pueden cambiarse con `DB_TUNNEL_PORT` y `DEV_PORT`; `DB_SSH_TARGET` permite configurar un alias SSH. No guardes la contraseña SSH en `.env` ni en Git. La aplicación desplegada sigue conectándose directamente al servicio `db` dentro de Docker. Cambiar código local no publica una versión: solo se actualiza Contabo cuando lo decidas.
 
 La prueba de integración se ejecuta contra una app y base en funcionamiento:
 
@@ -80,8 +92,14 @@ La prueba de integración se ejecuta contra una app y base en funcionamiento:
 node --env-file=.env scripts/smoke.mjs http://localhost:3002
 ```
 
-Comprueba acceso privado, salud de la base, guardado, actualización y eliminación de un registro temporal propio. No modifica estrategias del usuario.
+Comprueba acceso sin credenciales, salud de la base, guardado, actualización y eliminación de un registro temporal propio. No modifica estrategias del usuario.
 
 ## Alcance del simulador
 
 Es un modelo de investigación OHLC: una posición por estrategia, exposición máxima 1×, onzas fraccionarias, sin swap, requisitos de margen ni restricciones de lotaje de Exness. Los costos son supuestos editables, no tarifas verificadas. El drawdown es una estimación con capital flotante; las velas no revelan el orden exacto de todos los movimientos. SMC se limita a las definiciones visibles de BOS y FVG. No hay optimización automática de parámetros, pruebas fuera de muestra ni programación recurrente de lotes todavía.
+
+
+### Configuración de acceso en el servidor actual
+
+Contabo mantiene `.compose-db-access.yaml` como configuración operativa local (excluida del repositorio) y la referencia en `COMPOSE_FILE` dentro de su `.env`. Solo añade el enlace `127.0.0.1:15432` al contenedor existente de PostgreSQL. Esto permitió habilitar el desarrollo compartido sin reconstruir ni publicar otra versión de la aplicación. El `compose.yaml` de esta revisión ya declara ese mismo enlace para futuros despliegues.
+

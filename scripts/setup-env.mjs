@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 try {
   writeFileSync(
     '.env',
-    `POSTGRES_PASSWORD=${randomBytes(32).toString('hex')}\nAPP_PORT=3002\nAPP_BIND_ADDRESS=127.0.0.1\nAPP_USERNAME=carlos\nAPP_PASSWORD=${randomBytes(24).toString('base64url')}\n`,
+    `POSTGRES_PASSWORD=${randomBytes(32).toString('hex')}\nAPP_PORT=3002\nAPP_BIND_ADDRESS=127.0.0.1\n`,
     { flag: 'wx', mode: 0o600 },
   );
   console.log(

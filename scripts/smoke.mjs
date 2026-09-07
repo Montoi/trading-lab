@@ -1,19 +1,12 @@
 import assert from 'node:assert/strict';
 const base = process.argv[2] || 'http://localhost:3002';
-if (!process.env.APP_PASSWORD) throw Error('Carga APP_PASSWORD desde .env');
+
 const id = 'smoke-' + crypto.randomUUID();
-const headers = {
-  Authorization:
-    'Basic ' +
-    Buffer.from(
-      `${process.env.APP_USERNAME || 'carlos'}:${process.env.APP_PASSWORD}`,
-    ).toString('base64'),
-  'Content-Type': 'application/json',
-};
+const headers = { 'Content-Type': 'application/json' };
 assert.equal(
   (await fetch(base + '/api/records')).status,
-  401,
-  'La API debe requerir autenticación',
+  200,
+  'La API debe permitir acceso sin credenciales',
 );
 assert.equal(
   (await fetch(base + '/api/health')).status,
@@ -57,7 +50,7 @@ try {
   });
   assert.equal(forbidden.status, 403, 'Bloquear escrituras desde otro origen');
   console.log(
-    'OK: autenticación, salud, guardado, actualización y protección de origen.',
+    'OK: acceso sin credenciales, salud, guardado, actualización y protección de origen.',
   );
 } finally {
   const removed = await fetch(base + '/api/records?id=' + id, {
