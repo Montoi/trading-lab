@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Aurum · Laboratorio de estrategias',
-  description: 'Crea estrategias XAUUSD y evalúalas con backtesting reproducible.',
+  description:
+    'Crea estrategias XAUUSD y evalúalas con backtesting reproducible.',
 };
 
 export default function RootLayout({

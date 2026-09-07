@@ -12,3 +12,4 @@ outputs
 *.log
 *.tsbuildinfo
 .openai
+backups
