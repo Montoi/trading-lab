@@ -1,0 +1,14 @@
+node_modules
+.git
+.next
+.vinext
+.wrangler
+dist
+.env
+.env.*
+!.env.example
+work
+outputs
+*.log
+*.tsbuildinfo
+.openai
